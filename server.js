@@ -8,10 +8,10 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({ origin: "http://localhost:5175" }));
+app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5175"] }));
 app.use(express.json());
 
-// Generate a LiveKit access token
+// Local-development-only token endpoint. Add authentication and authorization before deployment.
 app.post("/get-token", async (req, res) => {
   try {
     const { roomName, participantName } = req.body;
@@ -60,8 +60,7 @@ app.post("/get-token", async (req, res) => {
       token: jwt,
       serverUrl: process.env.LIVEKIT_URL,
     });
-  } catch (error) {
-    console.error("Token generation failed:", error.message);
+  } catch {
     res.status(500).json({
       error: "Could not generate access token",
     });

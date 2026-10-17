@@ -2,6 +2,7 @@
 import { useState } from "react";
 import "./App.css";
 import CallsToMake from "./CallsToMake";
+import VoiceCall from "./VoiceCall";
 
 const menuItems = [
   { icon: "◫", name: "Dashboard" },
@@ -14,6 +15,26 @@ const menuItems = [
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("callTest") === "1") {
+    const roomName = params.get("room") || "customer-1";
+    const participantName = params.get("name") || "Local Test Participant";
+    return (
+      <main className="local-call-test">
+        <div className="local-call-test-card glass">
+          <p className="eyebrow">LOCAL CALL TEST</p>
+          <h1>Second participant</h1>
+          <p>Join the same room from another browser tab or window.</p>
+          <VoiceCall
+            roomName={roomName}
+            participantName={participantName}
+            onLeave={() => window.close()}
+          />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <div className="app">

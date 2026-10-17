@@ -1,5 +1,6 @@
 import { Phone } from "lucide-react";
 import { useState } from "react";
+import VoiceCall from "./VoiceCall";
 import "./CallsToMake.css";
 
 const customers = [
@@ -36,7 +37,6 @@ const customers = [
 function CallsToMake() {
   const [search, setSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [isMuted, setIsMuted] = useState(false);
   const [leads, setLeads] = useState(customers);
 
   const filteredLeads = leads.filter((lead) =>
@@ -108,8 +108,7 @@ function CallsToMake() {
                     <button
   className="start-call-button"
   onClick={() => {
-    setSelectedCustomer(lead);
-    setIsMuted(false);
+                      setSelectedCustomer(lead);
   }}
 >
   <Phone size={17} strokeWidth={2} />
@@ -148,29 +147,20 @@ Call
       <h2>{selectedCustomer.name}</h2>
       <p>{selectedCustomer.phone}</p>
 
-      <span className="call-status">
-        Ready to connect
-      </span>
+      <VoiceCall
+        roomName={`customer-${selectedCustomer.id}`}
+        participantName="Call Centre Agent"
+        onLeave={() => setSelectedCustomer(null)}
+      />
 
-      <div className="call-controls">
-        <button
-          className="mute-button"
-          onClick={() => setIsMuted(!isMuted)}
-        >
-          {isMuted ? "Unmute" : "Mute"}
-        </button>
-
-        <button
-          className="end-call-button"
-          onClick={() => setSelectedCustomer(null)}
-        >
-          ✕ Close
-        </button>
-      </div>
-
-      <p className="call-note">
-        Voice connection is not enabled yet.
-      </p>
+      <a
+        className="call-test-link"
+        href={`/?callTest=1&room=${encodeURIComponent(`customer-${selectedCustomer.id}`)}&name=${encodeURIComponent("Local Test Participant")}`}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Open a second browser participant for testing
+      </a>
     </div>
   </div>
 )}
