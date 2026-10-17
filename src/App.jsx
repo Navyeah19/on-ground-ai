@@ -2,6 +2,7 @@
 import { useState } from "react";
 import "./App.css";
 import CallsToMake from "./CallsToMake";
+import IncomingCalls from "./IncomingCalls";
 import VoiceCall from "./VoiceCall";
 
 const menuItems = [
@@ -180,6 +181,8 @@ function App() {
                 </div>
               </div>
             </>
+          ) : activePage === "Incoming" ? (
+            <IncomingCalls />
           ) : (
             <div className="placeholder glass">
               <h2>{activePage}</h2>

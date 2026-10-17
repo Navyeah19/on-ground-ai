@@ -1,0 +1,57 @@
+
+.incoming-page {
+  padding: 30px;
+  color: #173e32;
+}
+
+.incoming-header h1 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.incoming-header p {
+  color: #7c8b81;
+  margin-bottom: 25px;
+}
+
+.incoming-table-wrapper {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 18px;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.incoming-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.incoming-table th,
+.incoming-table td {
+  padding: 16px;
+  border-bottom: 1px solid #e4e5df;
+}
+
+.incoming-table th {
+  color: #657b6e;
+  font-size: 13px;
+}
+
+.incoming-status {
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.incoming-status.answered {
+  background: #e1efe3;
+  color: #357a50;
+}
+
+.incoming-status.missed {
+  background: #f9e1df;
+  color: #b94b4b;
+}
