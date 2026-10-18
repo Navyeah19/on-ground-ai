@@ -7,10 +7,14 @@ import CustomerCall from "./CustomerCall";
 import RecentCalls from "./RecentCalls";
 import VoiceCall from "./VoiceCall";
 import GlobalIncomingCall, { AgentCallProvider } from "./GlobalIncomingCall";
+import Calendar from "./Calendar";
+import Pulse from "./Pulse";
+import Leads from "./Leads";
 
 const menuItems = [
   { icon: "◫", name: "Dashboard" },
   { icon: "☎", name: "Calls to Make" },
+  { icon: "♙", name: "Leads" },
   { icon: "↙", name: "Incoming" },
   { icon: "◷", name: "Recent Calls" },
   { icon: "▦", name: "Calendar" },
@@ -114,6 +118,8 @@ function App() {
 
           {activePage === "Calls to Make" ? (
   <CallsToMake />
+) : activePage === "Leads" ? (
+  <Leads />
 ) : activePage === "Dashboard" ? (
             <>
               <div className="hero glass">
@@ -193,6 +199,10 @@ function App() {
             <IncomingCalls />
           ) : activePage === "Recent Calls" ? (
             <RecentCalls />
+          ) : activePage === "Calendar" ? (
+            <Calendar />
+          ) : activePage === "Pulse" ? (
+            <Pulse />
           ) : (
             <div className="placeholder glass">
               <h2>{activePage}</h2>

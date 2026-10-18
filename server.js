@@ -28,8 +28,14 @@ const endingCalls = new Set();
 const CALL_TIMEOUT_MS = 60_000;
 const AUDIO_CONNECT_TIMEOUT_MS = 45_000;
 const CALLS_FILE = join(dirname(fileURLToPath(import.meta.url)), "data", "calls.json");
+const SCHEDULED_CALLS_FILE = join(dirname(fileURLToPath(import.meta.url)), "data", "scheduled-calls.json");
+const LEADS_FILE = join(dirname(fileURLToPath(import.meta.url)), "data", "leads.json");
 let callHistory = [];
 let callHistoryWriteQueue = Promise.resolve();
+let scheduledCalls = [];
+let scheduledCallsWriteQueue = Promise.resolve();
+let leads = [];
+let leadsWriteQueue = Promise.resolve();
 
 function loadCallHistory() {
   return readFile(CALLS_FILE, "utf8").then((json) => {
@@ -60,6 +66,133 @@ async function writeCallHistorySnapshot(records) {
       throw error;
     }
   })();
+}
+
+async function loadScheduledCalls() {
+  try {
+    const json = await readFile(SCHEDULED_CALLS_FILE, "utf8");
+    const records = JSON.parse(json);
+    if (!Array.isArray(records)) throw new Error("Invalid scheduled calls format");
+    scheduledCalls = records;
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      scheduledCalls = [];
+      return;
+    }
+    throw error;
+  }
+}
+
+async function loadLeads() {
+  try {
+    const json = await readFile(LEADS_FILE, "utf8");
+    const records = JSON.parse(json);
+    if (!Array.isArray(records)) throw new Error("Invalid leads format");
+    leads = records;
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      leads = [];
+      return;
+    }
+    throw error;
+  }
+}
+
+async function writeLeadsSnapshot(records) {
+  const snapshot = JSON.stringify(records, null, 2);
+  await mkdir(dirname(LEADS_FILE), { recursive: true });
+  const temporaryFile = `${LEADS_FILE}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporaryFile, snapshot, { encoding: "utf8", flag: "wx" });
+    await rename(temporaryFile, LEADS_FILE);
+  } catch (error) {
+    await unlink(temporaryFile).catch(() => {});
+    throw error;
+  }
+}
+
+function mutateLeads(mutator) {
+  const operation = leadsWriteQueue.catch(() => {}).then(async () => {
+    const next = leads.map((lead) => ({ ...lead }));
+    const result = mutator(next);
+    if (!result.changed) return result.value;
+    await writeLeadsSnapshot(next);
+    leads = next;
+    return result.value;
+  });
+  leadsWriteQueue = operation;
+  return operation;
+}
+
+function validLeadFields(fields) {
+  if (!fields || typeof fields !== "object") return false;
+  const { customerName, phoneNumber, email, status, priority, notes } = fields;
+  const validStatuses = ["New", "Contacted", "Interested", "Follow-up", "Converted", "Lost"];
+  const validPriorities = ["High", "Medium", "Low"];
+  const normalizedEmail = typeof email === "string" ? email.trim() : "";
+  const lastContactedAt = fields.lastContactedAt ?? "";
+  const validLastContacted = typeof lastContactedAt === "string" && (!lastContactedAt || (() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(lastContactedAt)) return false;
+    const [year, month, day] = lastContactedAt.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+  })());
+  return typeof customerName === "string" && customerName.trim().length > 0 && customerName.trim().length <= 120 &&
+    typeof phoneNumber === "string" && /^[+\d().\-\s]{5,30}$/.test(phoneNumber.trim()) &&
+    normalizedEmail.length <= 254 && (!normalizedEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) &&
+    validStatuses.includes(status) && validPriorities.includes(priority) && validLastContacted &&
+    typeof notes === "string" && notes.length <= 5000;
+}
+
+function reportLeadPersistenceFailure(error) {
+  console.error(`[leads] persistence failed (${error.code || error.name || "unknown error"})`);
+}
+
+async function writeScheduledCallsSnapshot(records) {
+  const snapshot = JSON.stringify(records, null, 2);
+  await mkdir(dirname(SCHEDULED_CALLS_FILE), { recursive: true });
+  const temporaryFile = `${SCHEDULED_CALLS_FILE}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporaryFile, snapshot, { encoding: "utf8", flag: "wx" });
+    await rename(temporaryFile, SCHEDULED_CALLS_FILE);
+  } catch (error) {
+    await unlink(temporaryFile).catch(() => {});
+    throw error;
+  }
+}
+
+function mutateScheduledCalls(mutator) {
+  const operation = scheduledCallsWriteQueue.catch(() => {}).then(async () => {
+    const next = scheduledCalls.map((call) => ({ ...call }));
+    const result = mutator(next);
+    if (!result.changed) return result.value;
+    await writeScheduledCallsSnapshot(next);
+    scheduledCalls = next;
+    return result.value;
+  });
+  scheduledCallsWriteQueue = operation;
+  return operation;
+}
+
+function validScheduleFields(fields) {
+  if (
+    !fields ||
+    typeof fields.customerName !== "string" ||
+    !fields.customerName.trim() ||
+    fields.customerName.trim().length > 100 ||
+    typeof fields.phoneNumber !== "string" ||
+    !/^[+\d().\-\s]{5,30}$/.test(fields.phoneNumber.trim()) ||
+    typeof fields.date !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(fields.date) ||
+    typeof fields.time !== "string" ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(fields.time) ||
+    typeof fields.notes !== "string" ||
+    fields.notes.length > 2000
+  ) return false;
+
+  const [year, month, day] = fields.date.split("-").map(Number);
+  const parsedDate = new Date(year, month - 1, day);
+  return parsedDate.getFullYear() === year && parsedDate.getMonth() === month - 1 && parsedDate.getDate() === day;
 }
 
 function reportPersistenceFailure(error) {
@@ -148,6 +281,175 @@ app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5175"] }));
 app.use(express.json());
 
 // Local-only call history APIs. The server binds to loopback; do not expose these unauthenticated routes publicly.
+app.get("/api/scheduled-calls", (req, res) => {
+  res.json({ calls: scheduledCalls });
+});
+
+app.post("/api/scheduled-calls", async (req, res) => {
+  const fields = req.body || {};
+  if (!validScheduleFields(fields)) {
+    return res.status(400).json({ error: "Enter a valid customer name, phone number, date, time, and notes." });
+  }
+
+  const now = new Date().toISOString();
+  const call = {
+    id: randomUUID(),
+    customerName: fields.customerName.trim(),
+    phoneNumber: fields.phoneNumber.trim(),
+    date: fields.date,
+    time: fields.time,
+    notes: fields.notes.trim(),
+    createdAt: now,
+    updatedAt: now,
+  };
+  try {
+    await mutateScheduledCalls((records) => {
+      records.push(call);
+      return { changed: true, value: call };
+    });
+    return res.status(201).json({ call });
+  } catch (error) {
+    reportPersistenceFailure(error);
+    return res.status(500).json({ error: "Could not save the scheduled call." });
+  }
+});
+
+app.put("/api/scheduled-calls/:id", async (req, res) => {
+  const { id } = req.params;
+  const fields = req.body || {};
+  if (typeof id !== "string" || !validateCallId(id) || !validScheduleFields(fields)) {
+    return res.status(400).json({ error: "Enter valid scheduled call details." });
+  }
+
+  try {
+    const result = await mutateScheduledCalls((records) => {
+      const call = records.find((record) => record.id === id);
+      if (!call) return { changed: false, value: null };
+      Object.assign(call, {
+        customerName: fields.customerName.trim(),
+        phoneNumber: fields.phoneNumber.trim(),
+        date: fields.date,
+        time: fields.time,
+        notes: fields.notes.trim(),
+        updatedAt: new Date().toISOString(),
+      });
+      return { changed: true, value: call };
+    });
+    if (!result) return res.status(404).json({ error: "Scheduled call was not found." });
+    return res.json({ call: result });
+  } catch (error) {
+    reportPersistenceFailure(error);
+    return res.status(500).json({ error: "Could not update the scheduled call." });
+  }
+});
+
+app.delete("/api/scheduled-calls/:id", async (req, res) => {
+  const { id } = req.params;
+  if (typeof id !== "string" || !validateCallId(id)) {
+    return res.status(400).json({ error: "Invalid scheduled call ID." });
+  }
+
+  try {
+    const deleted = await mutateScheduledCalls((records) => {
+      const index = records.findIndex((record) => record.id === id);
+      if (index < 0) return { changed: false, value: false };
+      records.splice(index, 1);
+      return { changed: true, value: true };
+    });
+    if (!deleted) return res.status(404).json({ error: "Scheduled call was not found." });
+    return res.json({ deleted: true });
+  } catch (error) {
+    reportPersistenceFailure(error);
+    return res.status(500).json({ error: "Could not delete the scheduled call." });
+  }
+});
+
+// Local-development lead management. Records may contain customer contact details;
+// keep this loopback-only API private until authentication is added.
+app.get("/api/leads", (req, res) => {
+  res.json({ leads });
+});
+
+app.post("/api/leads", async (req, res) => {
+  const fields = req.body || {};
+  if (!validLeadFields(fields)) {
+    return res.status(400).json({ error: "Enter a valid name, phone number, email, status, priority, and notes." });
+  }
+
+  const timestamp = new Date().toISOString();
+  const lead = {
+    id: randomUUID(),
+    customerName: fields.customerName.trim(),
+    phoneNumber: fields.phoneNumber.trim(),
+    email: fields.email.trim(),
+    status: fields.status,
+    priority: fields.priority,
+    lastContactedAt: fields.lastContactedAt || null,
+    notes: fields.notes.trim(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  try {
+    await mutateLeads((records) => {
+      records.unshift(lead);
+      return { changed: true, value: lead };
+    });
+    return res.status(201).json({ lead });
+  } catch (error) {
+    reportLeadPersistenceFailure(error);
+    return res.status(500).json({ error: "Could not save the lead." });
+  }
+});
+
+app.put("/api/leads/:id", async (req, res) => {
+  const { id } = req.params;
+  const fields = req.body || {};
+  if (!validateCallId(id) || !validLeadFields(fields)) {
+    return res.status(400).json({ error: "Enter valid lead details." });
+  }
+
+  try {
+    const updated = await mutateLeads((records) => {
+      const lead = records.find((record) => record.id === id);
+      if (!lead) return { changed: false, value: null };
+      Object.assign(lead, {
+        customerName: fields.customerName.trim(),
+        phoneNumber: fields.phoneNumber.trim(),
+        email: fields.email.trim(),
+        status: fields.status,
+        priority: fields.priority,
+        lastContactedAt: fields.lastContactedAt || null,
+        notes: fields.notes.trim(),
+        updatedAt: new Date().toISOString(),
+      });
+      return { changed: true, value: lead };
+    });
+    if (!updated) return res.status(404).json({ error: "Lead was not found." });
+    return res.json({ lead: updated });
+  } catch (error) {
+    reportLeadPersistenceFailure(error);
+    return res.status(500).json({ error: "Could not update the lead." });
+  }
+});
+
+app.delete("/api/leads/:id", async (req, res) => {
+  const { id } = req.params;
+  if (!validateCallId(id)) return res.status(400).json({ error: "Invalid lead ID." });
+  try {
+    const deleted = await mutateLeads((records) => {
+      const index = records.findIndex((lead) => lead.id === id);
+      if (index < 0) return { changed: false, value: false };
+      records.splice(index, 1);
+      return { changed: true, value: true };
+    });
+    if (!deleted) return res.status(404).json({ error: "Lead was not found." });
+    return res.json({ deleted: true });
+  } catch (error) {
+    reportLeadPersistenceFailure(error);
+    return res.status(500).json({ error: "Could not delete the lead." });
+  }
+});
+
 app.get("/api/calls", (req, res) => {
   res.json({ calls: callHistory });
 });
@@ -601,6 +903,8 @@ io.on("connection", (socket) => {
 });
 
 await loadCallHistory();
+await loadScheduledCalls();
+await loadLeads();
 const staleCalls = callHistory.filter((call) => ["Ringing", "Connecting"].includes(call.status));
 if (staleCalls.length > 0) {
   const endedAt = new Date().toISOString();

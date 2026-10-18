@@ -29,3 +29,7 @@ dist-ssr
 # Local call history may contain customer information
 data/calls.json
 data/calls.json.tmp
+data/scheduled-calls.json
+data/scheduled-calls.json.*.tmp
+data/leads.json
+data/leads.json.*.tmp
