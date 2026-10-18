@@ -4,7 +4,9 @@ import "./App.css";
 import CallsToMake from "./CallsToMake";
 import IncomingCalls from "./IncomingCalls";
 import CustomerCall from "./CustomerCall";
+import RecentCalls from "./RecentCalls";
 import VoiceCall from "./VoiceCall";
+import GlobalIncomingCall, { AgentCallProvider } from "./GlobalIncomingCall";
 
 const menuItems = [
   { icon: "◫", name: "Dashboard" },
@@ -43,6 +45,7 @@ function App() {
   }
 
   return (
+    <AgentCallProvider>
     <div className="app">
       <aside className="sidebar">
         <div className="brand">
@@ -188,6 +191,8 @@ function App() {
             </>
           ) : activePage === "Incoming" ? (
             <IncomingCalls />
+          ) : activePage === "Recent Calls" ? (
+            <RecentCalls />
           ) : (
             <div className="placeholder glass">
               <h2>{activePage}</h2>
@@ -199,6 +204,8 @@ function App() {
         </div>
       </main>
     </div>
+    <GlobalIncomingCall activePage={activePage} />
+    </AgentCallProvider>
   );
 }
 

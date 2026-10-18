@@ -15,6 +15,7 @@ function CustomerCall() {
   const requestNameRef = useRef("");
   const requestPendingRef = useRef(false);
   const cancelRequestedRef = useRef(false);
+  const activeCallRef = useRef(null);
   const earlyAcceptancesRef = useRef(new Map());
   const earlyResolutionsRef = useRef(new Map());
 
@@ -55,10 +56,13 @@ function CustomerCall() {
       callIdRef.current = null;
       setError("");
       setPhase("accepted");
-      setActiveCall({
+      const acceptedCall = {
         roomName: payload.roomName,
         participantName: requestNameRef.current,
-      });
+        callId: payload.callId,
+      };
+      activeCallRef.current = acceptedCall;
+      setActiveCall(acceptedCall);
     }
 
     function handleConnect() {
@@ -89,6 +93,7 @@ function CustomerCall() {
     }
 
     function handleCallRequested(payload) {
+      console.info("[customer-call] call-requested event received");
       if (!requestPendingRef.current || typeof payload?.callId !== "string" || !payload.callId) return;
       if (callIdRef.current && callIdRef.current !== payload.callId) return;
 
@@ -149,6 +154,7 @@ function CustomerCall() {
     }
 
     function handleCallError(payload) {
+      console.warn("[customer-call] call-error event received");
       if (payload?.callId && callIdRef.current && payload.callId !== callIdRef.current) return;
       if (!requestPendingRef.current) return;
 
@@ -164,6 +170,22 @@ function CustomerCall() {
       setError(payload?.message || "The call could not be processed.");
     }
 
+    function handleRemoteCallEnded(payload) {
+      if (activeCallRef.current?.callId !== payload?.callId) return;
+      activeCallRef.current = null;
+      setActiveCall(null);
+      setPhase("ended");
+      setError("The agent ended the call.");
+    }
+
+    function handleCallAudioTimeout(payload) {
+      if (activeCallRef.current?.callId !== payload?.callId) return;
+      activeCallRef.current = null;
+      setActiveCall(null);
+      setPhase("error");
+      setError("The call could not establish LiveKit audio. Please try again.");
+    }
+
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
@@ -173,6 +195,8 @@ function CustomerCall() {
     socket.on("call-expired", handleCallExpired);
     socket.on("call-cancelled", handleCallCancelled);
     socket.on("call-error", handleCallError);
+    socket.on("call-remote-ended", handleRemoteCallEnded);
+    socket.on("call-audio-timeout", handleCallAudioTimeout);
     socket.connect();
 
     return () => {
@@ -185,6 +209,8 @@ function CustomerCall() {
       socket.off("call-expired", handleCallExpired);
       socket.off("call-cancelled", handleCallCancelled);
       socket.off("call-error", handleCallError);
+      socket.off("call-remote-ended", handleRemoteCallEnded);
+      socket.off("call-audio-timeout", handleCallAudioTimeout);
       socket.disconnect();
       if (socketRef.current === socket) socketRef.current = null;
     };
@@ -204,6 +230,7 @@ function CustomerCall() {
     earlyResolutionsRef.current.clear();
     setError("");
     setPhase("requesting");
+    console.info("[customer-call] emitting incoming-call");
     socket.emit("incoming-call", { customerName: name });
   }
 
@@ -219,6 +246,7 @@ function CustomerCall() {
   }
 
   function endCall() {
+    activeCallRef.current = null;
     setActiveCall(null);
     setPhase("ended");
   }
@@ -231,7 +259,7 @@ function CustomerCall() {
     cancelled: "Call cancelled.",
     rejected: "Call rejected.",
     expired: "No agent answered before the call expired.",
-    error: error || "The call could not be completed.",
+    error: "The call request could not be completed.",
     accepted: "Agent accepted. Connecting to the voice room…",
     ended: "Call ended.",
   }[phase];
@@ -273,10 +301,12 @@ function CustomerCall() {
               required
             />
 
-            <div className={`customer-call-status phase-${phase}`} aria-live="polite">
-              {waiting && <LoaderCircle className="customer-status-spinner" size={17} />}
-              <span>{phaseText}</span>
-            </div>
+            {!(phase === "error" && error) && (
+              <div className={`customer-call-status phase-${phase}`} aria-live="polite">
+                {waiting && <LoaderCircle className="customer-status-spinner" size={17} />}
+                <span>{phaseText}</span>
+              </div>
+            )}
             {error && <p className="customer-call-error" role="alert">{error}</p>}
 
             <div className="customer-call-actions">
@@ -308,6 +338,9 @@ function CustomerCall() {
             <VoiceCall
               roomName={activeCall.roomName}
               participantName={activeCall.participantName}
+              onConnected={() => socketRef.current?.emit("call-audio-connected", { callId: activeCall.callId })}
+              onCallEnded={() => socketRef.current?.emit("call-ended", { callId: activeCall.callId })}
+              onCallFailed={() => socketRef.current?.emit("call-audio-failed", { callId: activeCall.callId })}
               onLeave={endCall}
             />
           </div>

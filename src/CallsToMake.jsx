@@ -1,5 +1,5 @@
 import { Phone } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import VoiceCall from "./VoiceCall";
 import "./CallsToMake.css";
 
@@ -38,10 +38,56 @@ function CallsToMake() {
   const [search, setSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [leads, setLeads] = useState(customers);
+  const outgoingHistoryQueueRef = useRef(Promise.resolve());
 
   const filteredLeads = leads.filter((lead) =>
     lead.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  function startOutgoingCall(lead) {
+    const callId = crypto.randomUUID();
+    const roomName = `customer-${lead.id}`;
+    const call = { ...lead, callId, roomName, preparing: true, historyError: "" };
+    setSelectedCustomer(call);
+
+    fetch("http://localhost:3001/api/calls", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ callId, customerName: lead.name, roomName }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Could not save this call to history.");
+        setSelectedCustomer((current) =>
+          current?.callId === callId ? { ...current, preparing: false } : current
+        );
+      })
+      .catch(() => {
+        setSelectedCustomer((current) =>
+          current?.callId === callId
+            ? { ...current, preparing: false, historyError: "Call history is unavailable. The call can continue, but may not be saved." }
+            : current
+        );
+      });
+  }
+
+  function reportOutgoingEvent(callId, event) {
+    const request = outgoingHistoryQueueRef.current.catch(() => {}).then(async () => {
+      const response = await fetch(`http://localhost:3001/api/calls/${encodeURIComponent(callId)}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event }),
+      });
+      if (!response.ok) throw new Error("Could not update call history.");
+    });
+    outgoingHistoryQueueRef.current = request;
+    request.catch(() => {
+        setSelectedCustomer((current) =>
+          current?.callId === callId
+            ? { ...current, historyError: "Call history could not be updated." }
+            : current
+        );
+      });
+  }
 
   function markCompleted(id) {
     setLeads((previous) =>
@@ -107,9 +153,7 @@ function CallsToMake() {
                   <td>
                     <button
   className="start-call-button"
-  onClick={() => {
-                      setSelectedCustomer(lead);
-  }}
+  onClick={() => startOutgoingCall(lead)}
 >
   <Phone size={17} strokeWidth={2} />
 Call
@@ -147,11 +191,22 @@ Call
       <h2>{selectedCustomer.name}</h2>
       <p>{selectedCustomer.phone}</p>
 
-      <VoiceCall
-        roomName={`customer-${selectedCustomer.id}`}
-        participantName="Call Centre Agent"
-        onLeave={() => setSelectedCustomer(null)}
-      />
+      {selectedCustomer.preparing ? (
+        <span className="call-status">Preparing call…</span>
+      ) : (
+        <VoiceCall
+          roomName={selectedCustomer.roomName}
+          participantName="Call Centre Agent"
+          onConnected={() => reportOutgoingEvent(selectedCustomer.callId, "audio-connected")}
+          onCallEnded={() => reportOutgoingEvent(selectedCustomer.callId, "ended")}
+          onCallFailed={() => reportOutgoingEvent(selectedCustomer.callId, "failed")}
+          onLeave={() => setSelectedCustomer(null)}
+        />
+      )}
+
+      {selectedCustomer.historyError && (
+        <p className="voice-call-error" role="alert">{selectedCustomer.historyError}</p>
+      )}
 
       <a
         className="call-test-link"

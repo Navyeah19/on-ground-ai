@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
 import { Room, RoomEvent, Track } from "livekit-client";
 
-function VoiceCall({ roomName, participantName, onLeave }) {
+function VoiceCall({
+  roomName,
+  participantName,
+  onLeave,
+  onConnected,
+  onCallEnded,
+  onCallFailed,
+}) {
   const [status, setStatus] = useState("Connecting");
   const [muted, setMuted] = useState(false);
   const [error, setError] = useState("");
@@ -11,10 +18,41 @@ function VoiceCall({ roomName, participantName, onLeave }) {
   const audioContainerRef = useRef(null);
   const endedRef = useRef(false);
   const onLeaveRef = useRef(onLeave);
+  const onConnectedRef = useRef(onConnected);
+  const onCallEndedRef = useRef(onCallEnded);
+  const onCallFailedRef = useRef(onCallFailed);
+  const localMicReadyRef = useRef(false);
+  const remoteAudioSubscribedRef = useRef(false);
+  const joinedRoomRef = useRef(false);
+  const reportedConnectedRef = useRef(false);
+  const reportedEndedRef = useRef(false);
+  const reportedFailedRef = useRef(false);
 
   useEffect(() => {
     onLeaveRef.current = onLeave;
-  }, [onLeave]);
+    onConnectedRef.current = onConnected;
+    onCallEndedRef.current = onCallEnded;
+    onCallFailedRef.current = onCallFailed;
+  }, [onLeave, onConnected, onCallEnded, onCallFailed]);
+
+  function reportConnected() {
+    if (reportedConnectedRef.current || !localMicReadyRef.current || !remoteAudioSubscribedRef.current) return;
+    reportedConnectedRef.current = true;
+    onConnectedRef.current?.();
+  }
+
+  function reportEnded() {
+    if (reportedEndedRef.current || reportedFailedRef.current) return;
+    reportedEndedRef.current = true;
+    onCallEndedRef.current?.();
+  }
+
+  function reportFailed() {
+    if (reportedFailedRef.current || reportedConnectedRef.current) return;
+    reportedFailedRef.current = true;
+    reportedEndedRef.current = true;
+    onCallFailedRef.current?.();
+  }
 
   useEffect(() => {
     const room = new Room();
@@ -40,13 +78,29 @@ function VoiceCall({ roomName, participantName, onLeave }) {
         });
       });
     };
-    const onSubscribed = (track) => attachAudio(track);
-    const onUnsubscribed = (track) => detachAudio(track);
-    const onParticipantConnected = () => setStatus("Connected");
+    const onSubscribed = (track) => {
+      attachAudio(track);
+      if (track.kind === Track.Kind.Audio) {
+        remoteAudioSubscribedRef.current = true;
+        if (localMicReadyRef.current) setStatus("Connected");
+        reportConnected();
+      }
+    };
+    const onUnsubscribed = (track) => {
+      detachAudio(track);
+      if (track.kind === Track.Kind.Audio) {
+        remoteAudioSubscribedRef.current = false;
+        setStatus("Waiting for participant");
+      }
+    };
+    const onParticipantConnected = () => {
+      if (remoteAudioSubscribedRef.current) setStatus("Connected");
+    };
     const onParticipantDisconnected = () => setStatus("Waiting for participant");
     const onDisconnected = () => {
       detachAllRemoteAudio();
       setStatus("Disconnected");
+      if (joinedRoomRef.current) reportEnded();
     };
 
     room.on(RoomEvent.TrackSubscribed, onSubscribed);
@@ -71,22 +125,29 @@ function VoiceCall({ roomName, participantName, onLeave }) {
         if (cancelled) return;
 
         await room.connect(serverUrl, token);
+        joinedRoomRef.current = true;
         if (cancelled) {
           await room.disconnect();
+          reportEnded();
           return;
         }
 
         // Enabling the microphone requests browser permission and publishes audio.
         await room.localParticipant.setMicrophoneEnabled(true);
+        localMicReadyRef.current = true;
         if (cancelled) {
           await room.disconnect();
+          reportEnded();
           return;
         }
+        reportConnected();
         setReady(true);
-        setStatus(room.remoteParticipants.size > 0 ? "Connected" : "Waiting for participant");
+        setStatus(remoteAudioSubscribedRef.current ? "Connected" : "Waiting for participant");
       } catch (callError) {
         if (cancelled) return;
         setStatus("Error");
+        reportFailed();
+        room.disconnect().catch(() => {});
         setError(
           callError?.name === "NotAllowedError" || callError?.name === "PermissionDeniedError"
             ? "Microphone access was denied. Allow microphone access in your browser and try again."
@@ -105,6 +166,7 @@ function VoiceCall({ roomName, participantName, onLeave }) {
       room.off(RoomEvent.ParticipantDisconnected, onParticipantDisconnected);
       room.off(RoomEvent.Disconnected, onDisconnected);
       detachAllRemoteAudio();
+      if (joinedRoomRef.current) reportEnded();
       room.disconnect().catch(() => {});
       if (roomRef.current === room) roomRef.current = null;
     };
@@ -125,6 +187,7 @@ function VoiceCall({ roomName, participantName, onLeave }) {
   async function endCall() {
     if (endedRef.current) return;
     endedRef.current = true;
+    reportEnded();
     try {
       await roomRef.current?.disconnect();
     } finally {
