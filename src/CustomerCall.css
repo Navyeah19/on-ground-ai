@@ -1,0 +1,256 @@
+.customer-call-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  color: #173e32;
+  background:
+    radial-gradient(circle at 88% 8%, rgba(221, 187, 132, 0.28), transparent 34%),
+    radial-gradient(circle at 10% 92%, rgba(154, 184, 154, 0.2), transparent 34%),
+    #f2ede3;
+}
+
+.customer-call-card {
+  width: min(100%, 510px);
+  padding: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 16px 48px rgba(53, 69, 52, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 23px;
+}
+
+.customer-call-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 34px;
+}
+
+.customer-call-brand-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #e4c58d, #b98c48);
+  color: #16392c;
+  font-family: 'Manrope', sans-serif;
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.customer-call-brand strong,
+.customer-call-brand span {
+  display: block;
+}
+
+.customer-call-brand strong {
+  font-family: 'Manrope', sans-serif;
+  font-size: 15px;
+}
+
+.customer-call-brand span {
+  margin-top: 3px;
+  color: #789083;
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+.customer-call-card > .eyebrow {
+  margin-bottom: 9px;
+}
+
+.customer-call-card > h1 {
+  margin: 0;
+  color: #173b2d;
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(25px, 5vw, 32px);
+  letter-spacing: -0.8px;
+}
+
+.customer-call-intro {
+  margin: 11px 0 24px;
+  color: #7c8b81;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.customer-service-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.55);
+  color: #8c6b39;
+  font-size: 12px;
+}
+
+.customer-service-status.is-connected {
+  color: #357a50;
+}
+
+.customer-call-form label {
+  display: block;
+  margin-bottom: 8px;
+  color: #40584b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.customer-call-form input {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid #e1d8c8;
+  border-radius: 11px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.72);
+  color: #173e32;
+  font: inherit;
+  font-size: 14px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.customer-call-form input:focus {
+  border-color: #8eaa91;
+  box-shadow: 0 0 0 3px rgba(76, 137, 91, 0.11);
+}
+
+.customer-call-form input:disabled {
+  color: #78847b;
+}
+
+.customer-call-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 21px;
+  margin: 17px 0 12px;
+  color: #7e765f;
+  font-size: 13px;
+}
+
+.customer-call-status.phase-ringing,
+.customer-call-status.phase-requesting,
+.customer-call-status.phase-cancelling {
+  color: #977139;
+}
+
+.customer-call-status.phase-rejected,
+.customer-call-status.phase-expired,
+.customer-call-status.phase-error {
+  color: #aa4b43;
+}
+
+.customer-call-status.phase-cancelled,
+.customer-call-status.phase-ended,
+.customer-call-status.phase-accepted {
+  color: #357a50;
+}
+
+.customer-status-spinner {
+  flex: 0 0 auto;
+  animation: customer-spin 1.1s linear infinite;
+}
+
+@keyframes customer-spin {
+  to { transform: rotate(360deg); }
+}
+
+.customer-call-error {
+  margin: 0 0 12px;
+  color: #a7463e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.customer-call-actions {
+  display: flex;
+  gap: 11px;
+  margin-top: 18px;
+}
+
+.customer-start-button,
+.customer-cancel-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 47px;
+  padding: 12px 17px;
+  border: 0;
+  border-radius: 11px;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.customer-start-button {
+  flex: 1;
+  background: linear-gradient(135deg, #286c4a, #194b37);
+  box-shadow: 0 5px 13px rgba(25, 75, 55, 0.16);
+}
+
+.customer-cancel-button {
+  background: #b84e49;
+}
+
+.customer-start-button:hover:not(:disabled),
+.customer-cancel-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.customer-start-button:disabled,
+.customer-cancel-button:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.customer-live-call {
+  padding-top: 4px;
+}
+
+.customer-call-footnote {
+  margin: 28px 0 0;
+  color: #969b90;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .customer-call-page {
+    padding: 15px;
+  }
+
+  .customer-call-card {
+    padding: 27px 21px;
+    border-radius: 19px;
+  }
+
+  .customer-call-brand {
+    margin-bottom: 27px;
+  }
+
+  .customer-call-actions {
+    flex-direction: column;
+  }
+
+  .customer-start-button,
+  .customer-cancel-button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customer-status-spinner {
+    animation-duration: 3s;
+  }
+}

@@ -3,6 +3,7 @@ import { useState } from "react";
 import "./App.css";
 import CallsToMake from "./CallsToMake";
 import IncomingCalls from "./IncomingCalls";
+import CustomerCall from "./CustomerCall";
 import VoiceCall from "./VoiceCall";
 
 const menuItems = [
@@ -35,6 +36,10 @@ function App() {
         </div>
       </main>
     );
+  }
+
+  if (params.get("customerTest") === "1") {
+    return <CustomerCall />;
   }
 
   return (
