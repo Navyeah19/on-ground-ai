@@ -23,6 +23,19 @@ On-Ground.ai is a local-development call-centre workspace built with React and V
 - Oxlint
 - Local JSON files for call history, scheduled calls and leads
 
+## AI Tools Used
+
+- **ChatGPT** — Used for planning, understanding requirements, debugging guidance and documentation assistance.
+- **OpenAI Codex** — Used for code implementation, debugging and refinement.
+
+## Testing and Verification
+
+- Real browser-to-browser LiveKit voice audio was manually tested between a customer browser and an agent browser.
+- Incoming-call acceptance was tested.
+- Completed calls appear in Recent Calls with their call duration.
+- `npm run lint` passes without warnings or errors.
+- `npm run build` passes with the existing Vite large-chunk warning.
+
 ## Prerequisites
 
 - Node.js `20.19+` or `22.12+` and npm (required by the installed Vite version)
@@ -122,4 +135,4 @@ The backend creates `data/calls.json`, `data/scheduled-calls.json` and `data/lea
 - Voice calling is **browser-to-browser LiveKit audio**. It is not a telephone dialer and does not place calls on the public phone network.
 - The Express APIs, token endpoint and agent registration are unauthenticated local-development functionality. The server binds to loopback for local use. Add authentication, authorization, access controls and deployment security before exposing any endpoint publicly.
 - Call signalling and pending incoming calls are held in server memory; they do not survive a backend restart. Call history, scheduled calls and leads are persisted locally as JSON, not in a production database.
-- Microphone access and a reachable LiveKit server are required for a real voice test. This README does not imply that a two-person call has been tested.
+- Microphone access and a reachable LiveKit server are required for voice calls. Real two-person browser audio has been manually verified.
