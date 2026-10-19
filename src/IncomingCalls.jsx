@@ -1,12 +1,14 @@
-import { Phone, PhoneOff } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Clock3, Phone, PhoneOff, RefreshCw } from "lucide-react";
 import { useAgentCalls } from "./AgentCallContext";
 import "./IncomingCalls.css";
 
-const initialCalls = [
-  { id: 1, name: "Priya Sharma", phone: "9876543210", time: "10:30 AM", status: "Missed" },
-  { id: 2, name: "Amit Kumar", phone: "9876543211", time: "11:15 AM", status: "Answered" },
-  { id: 3, name: "Sneha Rao", phone: "9876543212", time: "12:00 PM", status: "Missed" },
-];
+function formatCallDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
 
 function IncomingCalls() {
   const {
@@ -21,18 +23,55 @@ function IncomingCalls() {
     rejectCall,
   } = useAgentCalls();
 
-  const historyCalls = [
-    ...resolvedCalls
-      .filter((call) => call.status === "Rejected")
-      .map((call) => ({
-        id: call.callId,
-        name: call.customerName,
-        phone: "—",
-        time: new Date(call.occurredAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        status: call.status,
-      })),
-    ...initialCalls,
-  ];
+  const [calls, setCalls] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const historyRequestRef = useRef(false);
+
+  const loadHistory = useCallback(async (quiet = false) => {
+    if (historyRequestRef.current) return;
+    historyRequestRef.current = true;
+    if (!quiet) setLoading(true);
+    try {
+      const response = await fetch("http://localhost:3001/api/calls", { cache: "no-store" });
+      if (!response.ok) throw new Error("Could not load incoming call history.");
+      const result = await response.json();
+      if (!Array.isArray(result.calls)) throw new Error("Call history response was invalid.");
+      setCalls(result.calls);
+      setHistoryError("");
+    } catch {
+      setHistoryError("Incoming call history is unavailable. Check that the local backend is running.");
+    } finally {
+      historyRequestRef.current = false;
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  const pendingKey = pendingCalls.map((call) => call.callId).join("|");
+  const resolvedKey = resolvedCalls.map((call) => call.callId).join("|");
+
+  useEffect(() => {
+    const refreshId = window.setTimeout(() => loadHistory(true), 0);
+    return () => window.clearTimeout(refreshId);
+  }, [loadHistory, pendingKey, resolvedKey, activeCall?.callId]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") loadHistory(true);
+    };
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [loadHistory]);
+
+  const historyCalls = useMemo(() => calls
+    .filter((call) => call.callType === "Incoming")
+    .sort((first, second) => (Date.parse(second.startedAt) || 0) - (Date.parse(first.startedAt) || 0)), [calls]);
 
   return (
     <div className="incoming-page">
@@ -77,23 +116,36 @@ function IncomingCalls() {
         </section>
       )}
 
-      <div className="incoming-table-wrapper">
-        <table className="incoming-table">
-          <thead>
-            <tr><th>Customer</th><th>Phone Number</th><th>Time</th><th>Status</th></tr>
-          </thead>
-          <tbody>
-            {historyCalls.map((call) => (
-              <tr key={call.id}>
-                <td>{call.name}</td>
-                <td>{call.phone}</td>
-                <td>{call.time}</td>
-                <td><span className={`incoming-status ${call.status.toLowerCase()}`}>{call.status}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <section className="incoming-history-panel glass" aria-label="Saved incoming call history">
+        <div className="incoming-history-heading">
+          <div><h2>Incoming call history</h2><p>Calls saved by the local call service.</p></div>
+          <div className="incoming-history-tools">
+            <span><Clock3 size={15} /> {historyCalls.length} {historyCalls.length === 1 ? "call" : "calls"}</span>
+            <button type="button" onClick={() => { setRefreshing(true); loadHistory(true); }} disabled={refreshing} aria-label="Refresh incoming call history"><RefreshCw size={15} className={refreshing ? "incoming-refreshing" : ""} /> Refresh</button>
+          </div>
+        </div>
+
+        {historyError && <div className="incoming-history-error" role="alert"><span>{historyError}</span><button type="button" onClick={() => loadHistory()}>Retry</button></div>}
+        {loading ? <div className="incoming-history-state">Loading incoming call history…</div> : historyError && historyCalls.length === 0 ? (
+          <div className="incoming-history-state">History could not be loaded. Retry when the backend is available.</div>
+        ) : historyCalls.length === 0 ? (
+          <div className="incoming-history-state"><div className="incoming-history-empty-icon"><Phone size={20} /></div><h3>No incoming calls yet</h3><p>Saved incoming browser calls will appear here after a customer contacts the call centre.</p></div>
+        ) : (
+          <div className="incoming-table-wrapper">
+            <table className="incoming-table">
+              <thead><tr><th>Customer</th><th>Phone Number</th><th>Date and Time</th><th>Status</th></tr></thead>
+              <tbody>{historyCalls.map((call) => (
+                <tr key={call.callId}>
+                  <td>{call.customerName || "Unknown customer"}</td>
+                  <td>{call.phoneNumber || call.phone || "—"}</td>
+                  <td>{formatCallDate(call.startedAt)}</td>
+                  <td><span className={`incoming-status ${String(call.status || "unknown").toLowerCase()}`}>{call.status || "Unknown"}</span></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
