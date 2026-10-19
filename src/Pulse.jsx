@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, AlertCircle, ArrowDownLeft, ArrowUpRight, Check, Clock3, Phone, RefreshCw } from "lucide-react";
+import { BarChart3, Home } from "lucide-react";
+import PulseHome from "./PulseHome";
 import "./Pulse.css";
 
 const ranges = [
@@ -45,7 +47,7 @@ function statusKey(status) {
   return "Other";
 }
 
-function Pulse() {
+function PulseAnalytics() {
   const [calls, setCalls] = useState([]);
   const [range, setRange] = useState(7);
   const [now, setNow] = useState(() => new Date());
@@ -139,7 +141,7 @@ function Pulse() {
       <div className="pulse-heading">
         <div>
           <p className="eyebrow">PERFORMANCE OVERVIEW</p>
-          <h1>Pulse</h1>
+          <h1>Call Analytics</h1>
           <p>Understand call outcomes and activity from your saved call history.</p>
         </div>
         <div className="pulse-heading-actions">
@@ -203,6 +205,39 @@ function Pulse() {
         </>
       )}
     </section>
+  );
+}
+
+function Pulse() {
+  const [view, setView] = useState("home");
+  const [channelId, setChannelId] = useState(null);
+
+  function openChannel(nextChannelId) {
+    setChannelId(nextChannelId);
+    setView("channel");
+  }
+
+  return (
+    <div className="pulse-module">
+      <header className="pulse-module-header">
+        <div>
+          <p className="eyebrow">TEAM COLLABORATION</p>
+          <h1>Pulse</h1>
+          <p>Coordinate with your team and review call performance.</p>
+        </div>
+        <nav className="pulse-module-tabs" aria-label="Pulse sections">
+          <button type="button" className={view !== "analytics" ? "active" : ""} aria-current={view !== "analytics" ? "page" : undefined} onClick={() => setView("home")}><Home size={15} /> Home</button>
+          <button type="button" className={view === "analytics" ? "active" : ""} aria-current={view === "analytics" ? "page" : undefined} onClick={() => setView("analytics")}><BarChart3 size={15} /> Analytics</button>
+        </nav>
+      </header>
+      {view === "analytics" ? <PulseAnalytics /> : (
+        <PulseHome
+          channelId={view === "channel" ? channelId : null}
+          onOpenChannel={openChannel}
+          onBack={() => setView("home")}
+        />
+      )}
+    </div>
   );
 }
 

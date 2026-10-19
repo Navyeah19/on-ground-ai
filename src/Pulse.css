@@ -77,3 +77,13 @@
 @media(max-width:1000px) { .pulse-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .pulse-charts { grid-template-columns:1fr; } }
 @media(max-width:620px) { .pulse-heading { align-items:flex-start; flex-direction:column; } .pulse-heading-actions { width:100%; justify-content:space-between; } .pulse-toolbar { align-items:flex-start; flex-direction:column; } .pulse-range { width:100%; justify-content:space-between; } .pulse-range button { padding:8px 9px; } .pulse-metrics { gap:9px; } .pulse-metric { padding:14px; } .pulse-metric-top { font-size:10px; } .pulse-metric > strong { font-size:22px; } .pulse-metric > small { min-height:28px; font-size:9px; } .pulse-chart-card,.pulse-recent { padding:16px; } .pulse-outcomes { gap:15px; } .pulse-donut { width:125px; height:125px; } .pulse-donut > div { width:78px; height:78px; } .pulse-legend { min-width:110px; } .pulse-bars { gap:5px; } .pulse-bar-column { height:180px; } .pulse-bars.days-30 { grid-template-columns:repeat(10,minmax(0,1fr)); } .pulse-bars.days-30 .pulse-bar-column { height:95px; } .pulse-recent-row { grid-template-columns:32px minmax(0,1fr) auto; gap:8px; } .pulse-recent-duration { display:none; } }
 @media(prefers-reduced-motion:reduce) { .pulse-bar,.pulse-refresh .is-spinning { animation:none; transition:none; } }
+
+.pulse-module { color:#173e32; }
+.pulse-module-header { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-bottom:22px; }
+.pulse-module-header h1 { margin:0 0 6px; color:#173b2d; font:800 27px Manrope,sans-serif; letter-spacing:-.8px; }
+.pulse-module-header p:last-child { margin:0; color:#829084; font-size:12px; }
+.pulse-module-tabs { display:flex; gap:6px; padding:4px; border:1px solid rgba(255,255,255,.68); border-radius:25px; background:rgba(255,255,255,.35); }
+.pulse-module-tabs button { display:inline-flex; min-height:36px; align-items:center; gap:7px; padding:0 14px; border:0; border-radius:20px; background:transparent; color:#78857a; cursor:pointer; font:600 11px 'DM Sans',sans-serif; }
+.pulse-module-tabs button.active { background:#194b37; color:#fff; box-shadow:0 4px 11px rgba(25,75,55,.15); }
+.pulse-module-tabs button:focus-visible { outline:2px solid #b9955b; outline-offset:2px; }
+@media(max-width:620px) { .pulse-module-header { align-items:flex-start; flex-direction:column; } .pulse-module-tabs { width:100%; } .pulse-module-tabs button { flex:1; justify-content:center; } }

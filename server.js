@@ -130,6 +130,12 @@ function validLeadFields(fields) {
   const validStatuses = ["New", "Contacted", "Interested", "Follow-up", "Converted", "Lost"];
   const validPriorities = ["High", "Medium", "Low"];
   const normalizedEmail = typeof email === "string" ? email.trim() : "";
+  const validScore = (score) => score === undefined || score === null || (Number.isInteger(score) && score >= 0 && score <= 100);
+  const validBuyingSignals = fields.buyingSignals === undefined || (
+    Array.isArray(fields.buyingSignals) &&
+    fields.buyingSignals.length <= 20 &&
+    fields.buyingSignals.every((signal) => typeof signal === "string" && signal.trim().length > 0 && signal.trim().length <= 240)
+  );
   const lastContactedAt = fields.lastContactedAt ?? "";
   const validLastContacted = typeof lastContactedAt === "string" && (!lastContactedAt || (() => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(lastContactedAt)) return false;
@@ -141,6 +147,7 @@ function validLeadFields(fields) {
     typeof phoneNumber === "string" && /^[+\d().\-\s]{5,30}$/.test(phoneNumber.trim()) &&
     normalizedEmail.length <= 254 && (!normalizedEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) &&
     validStatuses.includes(status) && validPriorities.includes(priority) && validLastContacted &&
+    validScore(fields.icpScore) && validScore(fields.intentScore) && validBuyingSignals &&
     typeof notes === "string" && notes.length <= 5000;
 }
 
@@ -384,6 +391,9 @@ app.post("/api/leads", async (req, res) => {
     email: fields.email.trim(),
     status: fields.status,
     priority: fields.priority,
+    icpScore: fields.icpScore ?? null,
+    intentScore: fields.intentScore ?? null,
+    buyingSignals: Array.isArray(fields.buyingSignals) ? fields.buyingSignals.map((signal) => signal.trim()) : [],
     lastContactedAt: fields.lastContactedAt || null,
     notes: fields.notes.trim(),
     createdAt: timestamp,
@@ -418,6 +428,9 @@ app.put("/api/leads/:id", async (req, res) => {
         email: fields.email.trim(),
         status: fields.status,
         priority: fields.priority,
+        ...(Object.hasOwn(fields, "icpScore") ? { icpScore: fields.icpScore ?? null } : {}),
+        ...(Object.hasOwn(fields, "intentScore") ? { intentScore: fields.intentScore ?? null } : {}),
+        ...(Object.hasOwn(fields, "buyingSignals") ? { buyingSignals: fields.buyingSignals.map((signal) => signal.trim()) } : {}),
         lastContactedAt: fields.lastContactedAt || null,
         notes: fields.notes.trim(),
         updatedAt: new Date().toISOString(),
