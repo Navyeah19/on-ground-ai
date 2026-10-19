@@ -25,6 +25,7 @@ dist-ssr
 # LiveKit credentials
 .env
 .env.*
+!.env.example
 
 # Local call history may contain customer information
 data/calls.json

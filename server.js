@@ -12,11 +12,18 @@ import { Server } from "socket.io";
 
 dotenv.config();
 
+const localFrontendOrigins = ["http://localhost:5173", "http://localhost:5175"];
+const deployedFrontendOrigins = (process.env.FRONTEND_URL || "")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+const allowedFrontendOrigins = [...new Set([...localFrontendOrigins, ...deployedFrontendOrigins])];
+
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5175"],
+    origin: allowedFrontendOrigins,
   },
 });
 const pendingCalls = new Map();
@@ -284,10 +291,10 @@ function validateCallId(callId) {
   return typeof callId === "string" && /^[A-Za-z0-9_-]{1,100}$/.test(callId);
 }
 
-app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5175"] }));
+app.use(cors({ origin: allowedFrontendOrigins }));
 app.use(express.json());
 
-// Local-only call history APIs. The server binds to loopback; do not expose these unauthenticated routes publicly.
+// Call-history APIs are unauthenticated; keep deployment private until access controls are implemented.
 app.get("/api/scheduled-calls", (req, res) => {
   res.json({ calls: scheduledCalls });
 });
@@ -929,6 +936,8 @@ if (staleCalls.length > 0) {
   await persistCallHistory();
 }
 
-httpServer.listen(3001, "127.0.0.1", () => {
-  console.log("LiveKit backend running at http://localhost:3001");
+const port = Number(process.env.PORT) || 3001;
+const host = process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
+httpServer.listen(port, host, () => {
+  console.log(`LiveKit backend listening on ${host}:${port}`);
 });

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Clock3, Search, X } from "lucide-react";
+import { API_BASE_URL } from "./config";
 import "./RecentCalls.css";
 
 const filters = ["All Calls", "Incoming", "Outgoing", "Missed"];
@@ -39,7 +40,7 @@ function RecentCalls() {
 
     async function loadCalls() {
       try {
-        const response = await fetch("http://localhost:3001/api/calls");
+        const response = await fetch(`${API_BASE_URL}/api/calls`);
         if (!response.ok) throw new Error("Could not load call history.");
         const result = await response.json();
         if (!cancelled) {

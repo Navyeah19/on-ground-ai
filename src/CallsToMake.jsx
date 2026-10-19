@@ -1,6 +1,7 @@
 import { Phone } from "lucide-react";
 import { useRef, useState } from "react";
 import VoiceCall from "./VoiceCall";
+import { API_BASE_URL } from "./config";
 import "./CallsToMake.css";
 
 const customers = [
@@ -50,7 +51,7 @@ function CallsToMake() {
     const call = { ...lead, callId, roomName, preparing: true, historyError: "" };
     setSelectedCustomer(call);
 
-    fetch("http://localhost:3001/api/calls", {
+    fetch(`${API_BASE_URL}/api/calls`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ callId, customerName: lead.name, roomName }),
@@ -72,7 +73,7 @@ function CallsToMake() {
 
   function reportOutgoingEvent(callId, event) {
     const request = outgoingHistoryQueueRef.current.catch(() => {}).then(async () => {
-      const response = await fetch(`http://localhost:3001/api/calls/${encodeURIComponent(callId)}/events`, {
+      const response = await fetch(`${API_BASE_URL}/api/calls/${encodeURIComponent(callId)}/events`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ event }),

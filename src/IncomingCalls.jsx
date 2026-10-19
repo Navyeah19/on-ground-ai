@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Clock3, Phone, PhoneOff, RefreshCw } from "lucide-react";
 import { useAgentCalls } from "./AgentCallContext";
+import { API_BASE_URL } from "./config";
 import "./IncomingCalls.css";
 
 function formatCallDate(value) {
@@ -34,7 +35,7 @@ function IncomingCalls() {
     historyRequestRef.current = true;
     if (!quiet) setLoading(true);
     try {
-      const response = await fetch("http://localhost:3001/api/calls", { cache: "no-store" });
+      const response = await fetch(`${API_BASE_URL}/api/calls`, { cache: "no-store" });
       if (!response.ok) throw new Error("Could not load incoming call history.");
       const result = await response.json();
       if (!Array.isArray(result.calls)) throw new Error("Call history response was invalid.");

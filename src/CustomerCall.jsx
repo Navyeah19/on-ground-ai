@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { LoaderCircle, Phone, PhoneOff, Wifi, WifiOff } from "lucide-react";
 import { io } from "socket.io-client";
 import VoiceCall from "./VoiceCall";
+import { API_BASE_URL } from "./config";
 import "./CustomerCall.css";
 
 function CustomerCall() {
@@ -20,7 +21,7 @@ function CustomerCall() {
   const earlyResolutionsRef = useRef(new Map());
 
   useEffect(() => {
-    const socket = io("http://localhost:3001", {
+    const socket = io(API_BASE_URL, {
       autoConnect: false,
       forceNew: true,
     });

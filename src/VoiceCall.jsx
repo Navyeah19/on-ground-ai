@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
 import { Room, RoomEvent, Track } from "livekit-client";
+import { API_BASE_URL } from "./config";
 
 function VoiceCall({
   roomName,
@@ -111,7 +112,7 @@ function VoiceCall({
 
     async function connect() {
       try {
-        const response = await fetch("http://localhost:3001/get-token", {
+        const response = await fetch(`${API_BASE_URL}/get-token`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ roomName, participantName }),

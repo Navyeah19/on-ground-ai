@@ -50,7 +50,7 @@ On-Ground.ai is a local-development call-centre workspace built with React and V
    npm install
    ```
 
-2. Create a root-level `.env` file. Use your own values locally; never add this file to source control:
+2. Create a root-level `.env` file. Use your own values locally; never add this file to source control. `.env.example` lists all supported variable names with placeholders. For local development, the required backend values are:
 
    ```dotenv
    LIVEKIT_API_KEY=<your-livekit-api-key>
@@ -58,7 +58,7 @@ On-Ground.ai is a local-development call-centre workspace built with React and V
    LIVEKIT_URL=<your-livekit-server-url>
    ```
 
-   These variables are read by `server.js`. The API secret is not read by the React frontend. No `VITE_` credentials are required.
+   These LiveKit variables are read only by `server.js`. The API secret is never read by the React frontend. `VITE_API_URL` is a frontend API origin, not a credential; if it is unset, the frontend uses `http://localhost:3001`.
 
 ## Run locally
 
@@ -70,7 +70,7 @@ Open two terminals in the project root.
 node server.js
 ```
 
-The backend listens on `127.0.0.1:3001`.
+In development, the backend listens on `127.0.0.1:3001`.
 
 **Terminal 2 — Vite frontend:**
 
@@ -87,6 +87,32 @@ npm run build
 npm run lint
 node --check server.js
 ```
+
+## Deploy to Render and Vercel
+
+Deploy the Express and Socket.IO backend as a Render **Web Service** from this repository. Use the project root as the service root, `npm install` as the build command, and `npm start` (equivalent to `node server.js`) as the start command. Render provides `PORT`; the server uses it and binds to `0.0.0.0` in production.
+
+Set these backend environment variables in Render. Use the LiveKit Cloud values from your LiveKit project, and replace the URL placeholders with your actual service domains:
+
+```dotenv
+LIVEKIT_API_KEY=<your-livekit-api-key>
+LIVEKIT_API_SECRET=<your-livekit-api-secret>
+LIVEKIT_URL=<your-livekit-cloud-websocket-url>
+FRONTEND_URL=https://<your-vercel-project>.vercel.app
+NODE_ENV=production
+```
+
+Keep `LIVEKIT_API_SECRET` only in Render's backend environment. Do not add LiveKit credentials to Vercel or any `VITE_` variable. `FRONTEND_URL` is used by both Express and Socket.IO CORS; local development origins `http://localhost:5173` and `http://localhost:5175` remain allowed.
+
+Deploy the frontend to Vercel as a Vite project. Use `npm run build` as the build command and `dist` as the output directory. Set this Vercel environment variable to the public HTTPS URL of the deployed Render service, then redeploy the frontend:
+
+```dotenv
+VITE_API_URL=https://<your-render-service>.onrender.com
+```
+
+The Vite app uses this URL for Express API requests, LiveKit token requests and Socket.IO. The `vercel.json` rewrite serves the single-page application for `/` and preserves query-string routes. The agent dashboard is available at `/`; the customer test page is available at `/?customerTest=1` on the same deployed frontend.
+
+**Storage limitation:** call history, leads and scheduled calls are currently stored in local JSON files. Render's default filesystem is ephemeral, so these records can be lost when the service restarts, redeploys or moves instances. This deployment setup does not add durable storage; use a database or a properly configured persistent disk before relying on saved records.
 
 ## Test a browser-to-browser call
 
@@ -133,6 +159,6 @@ The backend creates `data/calls.json`, `data/scheduled-calls.json` and `data/lea
 ## Limitations and security
 
 - Voice calling is **browser-to-browser LiveKit audio**. It is not a telephone dialer and does not place calls on the public phone network.
-- The Express APIs, token endpoint and agent registration are unauthenticated local-development functionality. The server binds to loopback for local use. Add authentication, authorization, access controls and deployment security before exposing any endpoint publicly.
+- The Express APIs, token endpoint and agent registration are unauthenticated local-development functionality. Production deployment makes the backend reachable over the network, so do not expose it for real customer use until authentication, authorization and appropriate access controls are implemented.
 - Call signalling and pending incoming calls are held in server memory; they do not survive a backend restart. Call history, scheduled calls and leads are persisted locally as JSON, not in a production database.
 - Microphone access and a reachable LiveKit server are required for voice calls. Real two-person browser audio has been manually verified.

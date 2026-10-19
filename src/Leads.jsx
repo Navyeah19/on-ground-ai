@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, ArrowUpRight, Search, Users, UserPlus, Sparkles, Clock3, CheckCircle2, Eye, Pencil, Trash2, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { API_BASE_URL } from "./config";
 import "./Leads.css";
 
 const statuses = ["New", "Contacted", "Interested", "Follow-up", "Converted", "Lost"];
@@ -40,7 +41,7 @@ function Leads() {
   const loadLeads = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:3001/api/leads", { cache: "no-store" });
+      const response = await fetch(`${API_BASE_URL}/api/leads`, { cache: "no-store" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Could not load leads.");
       setLeads(Array.isArray(result.leads) ? result.leads : []);
@@ -136,7 +137,7 @@ function Leads() {
     setFormError("");
     const editing = modal.mode === "edit";
     try {
-      const response = await fetch(editing ? `http://localhost:3001/api/leads/${encodeURIComponent(modal.leadId)}` : "http://localhost:3001/api/leads", {
+      const response = await fetch(editing ? `${API_BASE_URL}/api/leads/${encodeURIComponent(modal.leadId)}` : `${API_BASE_URL}/api/leads`, {
         method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -167,7 +168,7 @@ function Leads() {
     if (!window.confirm(`Delete the lead for ${lead.customerName}? This cannot be undone.`)) return;
     setPageError("");
     try {
-      const response = await fetch(`http://localhost:3001/api/leads/${encodeURIComponent(lead.id)}`, { method: "DELETE" });
+      const response = await fetch(`${API_BASE_URL}/api/leads/${encodeURIComponent(lead.id)}`, { method: "DELETE" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Could not delete the lead.");
       setLeads((current) => current.filter((item) => item.id !== lead.id));

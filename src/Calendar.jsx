@@ -10,9 +10,10 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { API_BASE_URL } from "./config";
 import "./Calendar.css";
 
-const API_URL = "http://localhost:3001/api/scheduled-calls";
+const API_URL = `${API_BASE_URL}/api/scheduled-calls`;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function dateKey(date) {

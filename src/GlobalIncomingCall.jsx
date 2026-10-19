@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Phone, PhoneOff, Wifi, WifiOff, X } from "lucide-react";
 import { io } from "socket.io-client";
 import VoiceCall from "./VoiceCall";
+import { API_BASE_URL } from "./config";
 import { AgentCallContext, useAgentCalls } from "./AgentCallContext";
 import "./GlobalIncomingCall.css";
 
@@ -41,7 +42,7 @@ export function AgentCallProvider({ children }) {
   }
 
   useEffect(() => {
-    const socket = io("http://localhost:3001", { autoConnect: false, forceNew: true });
+    const socket = io(API_BASE_URL, { autoConnect: false, forceNew: true });
     socketRef.current = socket;
 
     function handleConnect() {

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, AlertCircle, ArrowDownLeft, ArrowUpRight, Check, Clock3, Phone, RefreshCw } from "lucide-react";
 import { BarChart3, Home } from "lucide-react";
 import PulseHome from "./PulseHome";
+import { API_BASE_URL } from "./config";
 import "./Pulse.css";
 
 const ranges = [
@@ -59,7 +60,7 @@ function PulseAnalytics() {
     if (quiet) setRefreshing(true);
     else setLoading(true);
     try {
-      const response = await fetch("http://localhost:3001/api/calls", { cache: "no-store" });
+      const response = await fetch(`${API_BASE_URL}/api/calls`, { cache: "no-store" });
       if (!response.ok) throw new Error("Call history is unavailable.");
       const result = await response.json();
       if (!Array.isArray(result.calls)) throw new Error("Call history response was invalid.");
